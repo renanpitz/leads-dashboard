@@ -191,7 +191,7 @@ export function LeadsTable() {
                             onClick={() => {
                               const phoneNumber = cliente.telefone?.replace(/\D/g, "") // Remove non-digits
                               if (phoneNumber) {
-                                const waLink = `https://wa.me/55${phoneNumber}`
+                                const waLink = `https://wa.me/${phoneNumber}`
                                 window.open(waLink, "_blank")
                               }
                             }}
