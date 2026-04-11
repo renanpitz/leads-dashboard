@@ -4,6 +4,7 @@
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { LogOut, MessageCircle } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { signOut } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 
@@ -50,7 +51,8 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
             <h1 className="text-2xl font-bold text-foreground">{process.env.NEXT_PUBLIC_DASHBOARD_NAME! ?? "Painel Atendimento"}</h1>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">Olá, {user?.email || "Usuário"}</span>
+            <ThemeToggle />
+            <span className="text-sm text-muted-foreground hidden sm:inline-block">Olá, {user?.email || "Usuário"}</span>
             <Button variant="outline" className="cursor-pointer" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-2" />
               Sair

@@ -58,8 +58,11 @@ export interface Cliente {
   follow_up: number
   interessado: boolean
   last_followup: string | null
-  produto_interesse: string | null
+  servico_interesse: string | null
   followup_status: string
+  mensagem_para_humano: string | null
+  tag_status: string | null
+  tag_timestamp?: string | null
 }
 
 const TABLE_NAME = process.env.NEXT_PUBLIC_TABLE_NAME!;
@@ -76,14 +79,106 @@ export async function getClientes(): Promise<Cliente[]> {
   return data || []
 }
 
-export async function updateClienteStatus(id: number, trava: boolean): Promise<boolean> {
+export async function updateClienteStatus(id: number, trava: boolean, clearMensagem: boolean = false): Promise<boolean> {
   const supabase = createClient()
-  const { error } = await supabase.from(TABLE_NAME).update({ trava }).eq("id", id)
+  const updateData: any = { trava }
+  if (clearMensagem) {
+    updateData.mensagem_para_humano = null
+  }
+  const { error } = await supabase.from(TABLE_NAME).update(updateData).eq("id", id)
 
   if (error) {
     console.error("Erro ao atualizar status do cliente:", error)
     return false
   }
 
+  return true
+}
+
+export async function updateClienteTag(id: number, tag_status: string | null): Promise<boolean> {
+  const supabase = createClient()
+  
+  const updatePayload: any = { tag_status }
+  if (tag_status) {
+    updatePayload.tag_timestamp = new Date().toISOString()
+  } else {
+    updatePayload.tag_timestamp = null
+  }
+
+  const { error } = await supabase.from(TABLE_NAME).update(updatePayload).eq("id", id)
+
+  if (error) {
+    console.error("Erro ao atualizar tag do cliente:", error)
+    return false
+  }
+
+  return true
+}
+
+export async function updateClienteProduto(id: number, servico_interesse: string | null): Promise<boolean> {
+  const supabase = createClient()
+  const { error } = await supabase.from(TABLE_NAME).update({ servico_interesse }).eq("id", id)
+
+  if (error) {
+    console.error("Erro ao atualizar produto do cliente:", error)
+    return false
+  }
+
+  return true
+}
+
+export interface TemplateField {
+  key: string
+  label: string
+}
+
+export interface Template {
+  id: number
+  created_at: string
+  name: string
+  fields: TemplateField[]
+}
+
+export async function getTemplates(): Promise<Template[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase.from('templates').select('*').order('created_at', { ascending: false })
+  
+  if (error) {
+    console.error("Erro ao buscar templates:", error)
+    return []
+  }
+  return data as Template[]
+}
+
+export async function createTemplate(name: string, fields: TemplateField[]): Promise<Template | null> {
+  const supabase = createClient()
+  const { data, error } = await supabase.from('templates').insert([{ name, fields }]).select().single()
+  
+  if (error) {
+    console.error("Erro ao criar template:", error)
+    return null
+  }
+  return data as Template
+}
+
+export async function updateTemplate(id: number, name: string, fields: TemplateField[]): Promise<Template | null> {
+  const supabase = createClient()
+  const { data, error } = await supabase.from('templates').update({ name, fields }).eq('id', id).select().single()
+  
+  if (error) {
+    console.error("Erro ao atualizar template:", error)
+    return null
+  }
+  return data as Template
+}
+
+export async function deleteTemplate(id: number): Promise<boolean> {
+  const supabase = createClient()
+  const { error } = await supabase.from('templates').delete().eq('id', id)
+  
+  if (error) {
+    console.error("Erro ao deletar template:", error)
+    return false
+  }
   return true
 }

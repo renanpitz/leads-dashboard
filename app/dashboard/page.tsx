@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { DashboardMetrics } from "@/components/dashboard-metrics"
 import { LeadsTable } from "@/components/leads-table"
+import { TemplatesManager } from "@/components/templates-manager"
 import { getCurrentUser, onAuthStateChange } from "@/lib/supabase"
 
 export default function DashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState<"leads" | "templates">("leads")
   const router = useRouter()
 
   useEffect(() => {
@@ -82,10 +84,33 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-background">
       <DashboardHeader user={user} />
       <main className="container mx-auto px-4 py-8">
-        <div className="space-y-8">
-          <DashboardMetrics />
-          <LeadsTable />
+        <div className="flex border-b border-border mb-8">
+            <button 
+                onClick={() => setActiveTab('leads')}
+                className={`px-4 py-3 font-medium text-sm transition-colors outline-none relative ${activeTab === 'leads' ? 'text-[var(--whatsapp-green)]' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+                Leads
+                {activeTab === 'leads' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--whatsapp-green)] rounded-t-full" />}
+            </button>
+            <button 
+                onClick={() => setActiveTab('templates')}
+                className={`px-4 py-3 font-medium text-sm transition-colors outline-none relative ${activeTab === 'templates' ? 'text-[var(--whatsapp-green)]' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+                Templates (Mensagens)
+                {activeTab === 'templates' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--whatsapp-green)] rounded-t-full" />}
+            </button>
         </div>
+
+        {activeTab === 'leads' ? (
+            <div className="space-y-8 animate-in fade-in duration-500">
+                <DashboardMetrics />
+                <LeadsTable />
+            </div>
+        ) : (
+            <div className="animate-in fade-in duration-500">
+                <TemplatesManager />
+            </div>
+        )}
       </main>
     </div>
   )
