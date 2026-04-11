@@ -127,6 +127,43 @@ export async function updateClienteProduto(id: number, servico_interesse: string
   return true
 }
 
+export async function addCliente(payload: { nome: string, telefone: string, tag_status: string | null, servico_interesse: string | null, interessado: boolean }): Promise<Cliente | null> {
+  const supabase = createClient()
+  
+  const insertData = {
+    nome: payload.nome,
+    telefone: payload.telefone,
+    tag_status: payload.tag_status || null,
+    servico_interesse: payload.servico_interesse || null,
+    interessado: payload.interessado,
+    trava: false, // AI ativo / untrapped
+    follow_up: 0,
+    followup_status: "iniciado",
+    mensagem_para_humano: null
+  }
+  
+  const { data, error } = await supabase.from(TABLE_NAME).insert([insertData]).select().single()
+
+  if (error) {
+    console.error("Erro ao adicionar cliente manualmente:", error)
+    return null
+  }
+
+  return data as Cliente
+}
+
+export async function deleteCliente(id: number): Promise<boolean> {
+  const supabase = createClient()
+  const { error } = await supabase.from(TABLE_NAME).delete().eq("id", id)
+
+  if (error) {
+    console.error("Erro ao deletar cliente:", error)
+    return false
+  }
+
+  return true
+}
+
 export interface TemplateField {
   key: string
   label: string

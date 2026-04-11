@@ -96,7 +96,7 @@ export default function DashboardPage() {
                 onClick={() => setActiveTab('templates')}
                 className={`px-4 py-3 font-medium text-sm transition-colors outline-none relative ${activeTab === 'templates' ? 'text-[var(--whatsapp-green)]' : 'text-muted-foreground hover:text-foreground'}`}
             >
-                Templates (Mensagens)
+                Disparador (Mensagens)
                 {activeTab === 'templates' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--whatsapp-green)] rounded-t-full" />}
             </button>
         </div>

@@ -16,8 +16,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { ChevronLeft, ChevronRight, Lock, Unlock, Filter, MessageCircle, Phone, MessageSquareText, Pencil, ArrowUpDown } from "lucide-react"
-import { getClientes, updateClienteStatus, updateClienteTag, updateClienteProduto, type Cliente } from "@/lib/supabase"
+import { ChevronLeft, ChevronRight, Lock, Unlock, Filter, MessageCircle, Phone, MessageSquareText, Pencil, ArrowUpDown, Settings2, Plus, LayoutGrid, Trash2 } from "lucide-react"
+import { getClientes, updateClienteStatus, updateClienteTag, updateClienteProduto, addCliente, deleteCliente, type Cliente } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 
 const getTagColor = (tag: string | null) => {
@@ -45,6 +45,58 @@ export function LeadsTable() {
   const [isProdutoDialogOpen, setIsProdutoDialogOpen] = useState(false)
   const [currentEditClienteId, setCurrentEditClienteId] = useState<number | null>(null)
   const [selectedProdutos, setSelectedProdutos] = useState<string[]>([])
+
+  const [isAddLeadOpen, setIsAddLeadOpen] = useState(false)
+  const [newLead, setNewLead] = useState<{ nome: string, telefone: string, tag_status: string, servico_interesse: string[], interessado: string }>({ nome: "", telefone: "", tag_status: "", servico_interesse: [], interessado: "sim" })
+  const [isAddingLead, setIsAddingLead] = useState(false)
+  const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false)
+
+  const [visibleColumns, setVisibleColumns] = useState({
+    cliente: true,
+    produto: true,
+    tag: true,
+    status: true,
+    mensagem: true,
+    followup: true
+  })
+
+  useEffect(() => {
+    const saved = localStorage.getItem("leads-table-cols")
+    if (saved) {
+      try { setVisibleColumns(JSON.parse(saved)) } catch (e) {}
+    }
+  }, [])
+
+  const toggleColumn = (key: keyof typeof visibleColumns) => {
+    const next = { ...visibleColumns, [key]: !visibleColumns[key] }
+    setVisibleColumns(next)
+    localStorage.setItem("leads-table-cols", JSON.stringify(next))
+  }
+
+  const handleAddLead = async () => {
+    if (!newLead.nome || !newLead.telefone) {
+      toast({ title: "Atenção", description: "Nome e Telefone são obrigatórios.", variant: "destructive" })
+      return
+    }
+    setIsAddingLead(true)
+    const success = await addCliente({
+      nome: newLead.nome,
+      telefone: newLead.telefone,
+      tag_status: newLead.tag_status || null,
+      servico_interesse: newLead.servico_interesse.length > 0 ? newLead.servico_interesse.join(", ") : null,
+      interessado: newLead.interessado === "sim"
+    })
+    setIsAddingLead(false)
+    
+    if (success) {
+      toast({ title: "Sucesso", description: "Lead adicionado com sucesso." })
+      setIsAddLeadOpen(false)
+      setNewLead({ nome: "", telefone: "", tag_status: "", servico_interesse: [], interessado: "sim" })
+      loadClientes()
+    } else {
+      toast({ title: "Erro", description: "Falha ao adicionar lead.", variant: "destructive" })
+    }
+  }
 
   const [sortConfig, setSortConfig] = useState<{ key: keyof Cliente | null; direction: "asc" | "desc" }>({ key: null, direction: "asc" })
 
@@ -187,6 +239,16 @@ export function LeadsTable() {
     setCurrentEditClienteId(null)
   }
 
+  const handleDeleteCliente = async (clienteId: number) => {
+    const success = await deleteCliente(clienteId)
+    if (success) {
+      setClientes(clientes.filter(c => c.id !== clienteId))
+      toast({ title: "Sucesso", description: "Lead removido com sucesso." })
+    } else {
+      toast({ title: "Erro", description: "Não foi possível remover o lead.", variant: "destructive" })
+    }
+  }
+
   const handleToggleConversation = async (clienteId: number, clienteName: string | null) => {
     const cliente = clientes.find((c) => c.id === clienteId)
     if (!cliente) return
@@ -288,9 +350,47 @@ export function LeadsTable() {
                 </Button>
               </div>
             )}
-            <Badge variant="secondary">
+            <Badge variant="secondary" className="hidden sm:inline-flex">
               {filteredClientes.length} {(filterProduto !== "all" || filterTag !== "all" || filterInteressado !== "all" || filterStatus !== "all" || showFollowUpFilter) ? "filtrados" : "clientes"}
             </Badge>
+
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsColumnDropdownOpen(!isColumnDropdownOpen)}
+                className="flex items-center gap-2 bg-transparent"
+              >
+                <Settings2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Colunas</span>
+              </Button>
+              {isColumnDropdownOpen && (
+                <div className="absolute right-0 sm:right-auto sm:left-0 mt-2 w-48 rounded-md shadow-lg bg-background border ring-1 ring-black ring-opacity-5 z-50 p-2">
+                  <div className="text-xs font-semibold text-muted-foreground mb-2 px-2">Exibir Colunas</div>
+                  {Object.keys(visibleColumns).map((col) => (
+                    <label key={col} className="flex items-center space-x-2 px-2 py-1.5 hover:bg-muted rounded cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={visibleColumns[col as keyof typeof visibleColumns]}
+                        onChange={() => toggleColumn(col as keyof typeof visibleColumns)}
+                        className="rounded border-gray-300 text-[var(--whatsapp-green)] focus:ring-[var(--whatsapp-green)]"
+                      />
+                      <span className="text-sm capitalize">{col === "followup" ? "Follow Up" : col}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setIsAddLeadOpen(true)}
+              className="flex items-center gap-2 bg-[var(--whatsapp-green)] hover:bg-[var(--whatsapp-green)]/90 text-white"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Novo Lead</span>
+            </Button>
           </div>
         </CardTitle>
       </CardHeader>
@@ -360,33 +460,38 @@ export function LeadsTable() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {renderSortableHeader("Nome", "nome")}
-                    {renderSortableHeader("Telefone", "telefone")}
-                    {renderSortableHeader("Interessado", "interessado")}
-                    {renderSortableHeader("Produto", "servico_interesse")}
-                    {renderSortableHeader("Tag", "tag_status")}
-                    {renderSortableHeader("Status", "trava")}
-                    {renderSortableHeader("Msg Humana", "mensagem_para_humano")}
-                    {renderSortableHeader("Follow Up", "follow_up")}
+                    {visibleColumns.cliente && renderSortableHeader("Nome", "nome")}
+                    {visibleColumns.cliente && renderSortableHeader("Telefone", "telefone")}
+                    {visibleColumns.cliente && renderSortableHeader("Interessado", "interessado")}
+                    {visibleColumns.produto && renderSortableHeader("Produto", "servico_interesse")}
+                    {visibleColumns.tag && renderSortableHeader("Tag", "tag_status")}
+                    {visibleColumns.status && renderSortableHeader("Status", "trava")}
+                    {visibleColumns.mensagem && renderSortableHeader("Msg Humana", "mensagem_para_humano")}
+                    {visibleColumns.followup && renderSortableHeader("Follow Up", "follow_up")}
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {currentClientes.map((cliente) => (
                     <TableRow key={cliente.id}>
-                      <TableCell className="font-medium">{cliente.nome || "Sem nome"}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-3 w-3 text-[var(--whatsapp-green)]" />
-                          <span className="text-sm">{cliente.telefone || "Sem telefone"}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={cliente.interessado ? "default" : "secondary"}>
-                          {cliente.interessado ? "Sim" : "Não"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
+                      {visibleColumns.cliente && <TableCell className="font-medium">{cliente.nome || "Sem nome"}</TableCell>}
+                      {visibleColumns.cliente && (
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-3 w-3 text-[var(--whatsapp-green)]" />
+                            <span className="text-sm">{cliente.telefone || "Sem telefone"}</span>
+                          </div>
+                        </TableCell>
+                      )}
+                      {visibleColumns.cliente && (
+                        <TableCell>
+                          <Badge variant={cliente.interessado ? "default" : "secondary"}>
+                            {cliente.interessado ? "Sim" : "Não"}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      {visibleColumns.produto && (
+                        <TableCell>
                         <div className="flex items-center gap-2">
                           <div className="max-w-[150px]" title={cliente.servico_interesse || ""}>
                             {cliente.servico_interesse ? (
@@ -412,9 +517,11 @@ export function LeadsTable() {
                             <Pencil className="h-3 w-3" />
                           </Button>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <select
+                        </TableCell>
+                      )}
+                      {visibleColumns.tag && (
+                        <TableCell>
+                          <select
                           value={cliente.tag_status || ""}
                           onChange={(e) => handleUpdateTag(cliente.id, e.target.value)}
                           className={`text-xs rounded-full px-2 py-1 font-medium cursor-pointer border outline-none ${
@@ -430,16 +537,20 @@ export function LeadsTable() {
                           <option value="Lead">Lead</option>
                         </select>
                       </TableCell>
-                      <TableCell>
-                        <Badge
+                      )}
+                      {visibleColumns.status && (
+                        <TableCell>
+                          <Badge
                           variant={!cliente.trava ? "default" : "secondary"}
                           className={!cliente.trava ? "text-white" : "text-orange-500"}
                         >
                           {!cliente.trava ? "Ativo" : "Travado"}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {cliente.mensagem_para_humano ? (
+                        </TableCell>
+                      )}
+                      {visibleColumns.mensagem && (
+                        <TableCell>
+                          {cliente.mensagem_para_humano ? (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="outline" size="sm" className="h-8 w-8 p-0 bg-transparent cursor-pointer text-blue-500 hover:bg-blue-50 hover:text-blue-600">
@@ -461,10 +572,13 @@ export function LeadsTable() {
                         ) : (
                           <span className="text-muted-foreground text-xs">-</span>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={cliente.follow_up > 1 ? "default" : "outline"}>{cliente.follow_up}</Badge>
-                      </TableCell>
+                        </TableCell>
+                      )}
+                      {visibleColumns.followup && (
+                        <TableCell>
+                          <Badge variant={cliente.follow_up > 1 ? "default" : "outline"}>{cliente.follow_up}</Badge>
+                        </TableCell>
+                      )}
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button
@@ -504,6 +618,28 @@ export function LeadsTable() {
                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                 <AlertDialogAction onClick={() => handleToggleConversation(cliente.id, cliente.nome)}>
                                   {cliente.trava ? "Destravar" : "Travar"}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm" className="h-8 w-8 p-0 bg-transparent cursor-pointer text-red-400 hover:text-red-500 hover:bg-red-50">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Remover Lead</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja remover o lead {cliente.nome}? Esta ação é irreversível e o contato será excluído permanentemente da tabela.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteCliente(cliente.id)} className="bg-red-500 hover:bg-red-600 text-white">
+                                  Remover
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
@@ -620,6 +756,93 @@ export function LeadsTable() {
                 <AlertDialogFooter className="mt-6">
                   <AlertDialogCancel onClick={() => setIsProdutoDialogOpen(false)}>Cancelar</AlertDialogCancel>
                   <AlertDialogAction onClick={handleSaveProdutos} className="bg-[var(--whatsapp-green)] hover:bg-[var(--whatsapp-green)]/90 text-white">Salvar Produtos</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Modal de Adicionar Novo Lead */}
+            <AlertDialog open={isAddLeadOpen} onOpenChange={setIsAddLeadOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Adicionar Novo Lead</AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-4 mt-4 text-foreground text-sm">
+                      <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">Nome Completo *</label>
+                        <input
+                          type="text"
+                          value={newLead.nome}
+                          onChange={(e) => setNewLead({ ...newLead, nome: e.target.value })}
+                          className="w-full border border-input rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--whatsapp-green)]"
+                          placeholder="Ex: João da Silva"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">Telefone (com DDD) *</label>
+                        <input
+                          type="text"
+                          value={newLead.telefone}
+                          onChange={(e) => setNewLead({ ...newLead, telefone: e.target.value })}
+                          className="w-full border border-input rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--whatsapp-green)]"
+                          placeholder="Ex: 5511999999999"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-muted-foreground mb-1">Interessado?</label>
+                          <select
+                            value={newLead.interessado}
+                            onChange={(e) => setNewLead({ ...newLead, interessado: e.target.value })}
+                            className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-[var(--whatsapp-green)]"
+                          >
+                            <option value="sim">Sim</option>
+                            <option value="nao">Não</option>
+                          </select>
+                        </div>
+                        <div className="col-span-2 sm:col-span-1">
+                          <label className="block text-xs font-medium text-muted-foreground mb-1.5">Produto Base</label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {PRODUTOS_OPTIONS.map(prod => (
+                              <label key={prod} className="flex items-center space-x-1.5 bg-muted/30 px-2 py-1 rounded cursor-pointer border border-transparent hover:border-slate-200">
+                                <input
+                                  type="checkbox"
+                                  checked={newLead.servico_interesse.includes(prod)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) setNewLead({ ...newLead, servico_interesse: [...newLead.servico_interesse, prod] })
+                                    else setNewLead({ ...newLead, servico_interesse: newLead.servico_interesse.filter(p => p !== prod) })
+                                  }}
+                                  className="h-3.5 w-3.5 rounded border-gray-300 text-[var(--whatsapp-green)] focus:ring-[var(--whatsapp-green)]"
+                                />
+                                <span className="text-xs font-medium">{prod}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">Etiqueta Inicial (Tag)</label>
+                        <select
+                          value={newLead.tag_status}
+                          onChange={(e) => setNewLead({ ...newLead, tag_status: e.target.value })}
+                          className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-[var(--whatsapp-green)]"
+                        >
+                          <option value="">Sem Tag</option>
+                          <option value="Em Atendimento">Em Atendimento</option>
+                          <option value="Agendado">Agendado</option>
+                          <option value="Cancelado">Cancelado</option>
+                          <option value="Paciente">Paciente</option>
+                          <option value="paciente_tratamento">Paciente Tratamento</option>
+                          <option value="Lead">Lead</option>
+                        </select>
+                      </div>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="mt-6">
+                  <AlertDialogCancel onClick={() => setIsAddLeadOpen(false)}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleAddLead} disabled={isAddingLead} className="bg-[var(--whatsapp-green)] hover:bg-[var(--whatsapp-green)]/90 text-white">
+                    {isAddingLead ? "Salvando..." : "Adicionar Lead"}
+                  </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
