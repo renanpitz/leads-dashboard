@@ -463,8 +463,8 @@ export function TemplatesManager() {
                     Você pode digitar estas chaves nos campos abaixo. O sistema vai substituí-las automaticamente pelos dados associados a cada lead. (Clique para copiar)
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline" className="font-mono bg-white dark:bg-black/50 text-blue-700 dark:text-blue-300 cursor-pointer hover:border-blue-500 hover:bg-blue-100 transition-colors" onClick={() => insertVariable("{{Nome}}")}>{"{{Nome}}"}</Badge>
-                    <Badge variant="outline" className="font-mono bg-white dark:bg-black/50 text-blue-700 dark:text-blue-300 cursor-pointer hover:border-blue-500 hover:bg-blue-100 transition-colors" onClick={() => insertVariable("{{Produto}}")}>{"{{Produto}}"}</Badge>
+                    <Badge variant="outline" className="font-mono bg-white dark:bg-black/50 text-blue-700 dark:text-blue-300 cursor-pointer hover:border-blue-500 hover:bg-blue-100 transition-colors" onPointerDown={(e) => { e.preventDefault(); insertVariable("{{Nome}}"); }}>{"{{Nome}}"}</Badge>
+                    <Badge variant="outline" className="font-mono bg-white dark:bg-black/50 text-blue-700 dark:text-blue-300 cursor-pointer hover:border-blue-500 hover:bg-blue-100 transition-colors" onPointerDown={(e) => { e.preventDefault(); insertVariable("{{Produto}}"); }}>{"{{Produto}}"}</Badge>
                   </div>
                 </div>
                 <div className="bg-muted/20 p-4 rounded-lg border space-y-4">
