@@ -52,6 +52,7 @@ export function TemplatesManager() {
   const [isCopied, setIsCopied] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [lastFocus, setLastFocus] = useState<{key: string, start: number, end: number} | null>(null)
+  const [targetEnv, setTargetEnv] = useState<"dev" | "prod">("dev")
   
   // Filter States
   const [selectedTags, setSelectedTags] = useState<string[]>([])
@@ -229,9 +230,14 @@ export function TemplatesManager() {
   const executeDisparo = async () => {
     if (!jsonOutput) return;
 
+    const webhookUrls = {
+      dev: "https://workflow.renanmlops.online/webhook-test/receber-leads",
+      prod: "https://webhookworkflow.renanmlops.online/webhook/receber-leads"
+    }
+
     try {
       setIsSending(true);
-      const response = await fetch("https://workflow.renanmlops.online/webhook-test/receber-leads", {
+      const response = await fetch(webhookUrls[targetEnv], {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: jsonOutput
@@ -303,9 +309,9 @@ export function TemplatesManager() {
                       <p className="text-xs text-muted-foreground mb-4">{template.fields.length} campos dinâmicos</p>
                     </div>
                     <div className="flex items-center justify-between mt-4">
-                      <Button variant="default" size="sm" onClick={() => handleUseTemplate(template)} className="flex items-center gap-2 bg-[var(--whatsapp-green)] hover:bg-[var(--whatsapp-green)]/90 text-white">
+                      <Button variant="default" size="sm" onClick={() => handleUseTemplate(template)} className="flex items-center gap-2 bg-[var(--whatsapp-green)] hover:bg-[var(--whatsapp-green)]/90 text-white flex-1 sm:flex-none justify-center">
                         <Play className="h-3 w-3" />
-                        Disparar (Usar)
+                        Usar
                       </Button>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="icon" onClick={() => handleEditTemplate(template)} className="text-muted-foreground hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20">
@@ -492,10 +498,10 @@ export function TemplatesManager() {
             </div>
 
             {/* Output Right Side */}
-            <div className="space-y-4 bg-muted/10 rounded-lg border flex flex-col h-[calc(100vh-250px)] min-h-[500px]">
-              <div className="flex items-center justify-between p-4 border-b bg-muted/30">
+            <div className="space-y-4 bg-muted/10 rounded-lg border flex flex-col sm:h-[calc(100vh-250px)] min-h-[400px] h-auto">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border-b bg-muted/30 gap-4">
                 <span className="font-mono text-sm font-semibold">Webook Payload (Final)</span>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -522,7 +528,25 @@ export function TemplatesManager() {
                         <AlertDialogTitle>Confirmar Disparo em Lote</AlertDialogTitle>
                         <AlertDialogDescription asChild>
                           <div className="space-y-4 mt-2">
-                            <p>Você está prestes a disparar no WhatsApp via n8n.</p>
+                            <p>Você está prestes a disparar no WhatsApp via n8n. Selecione o ambiente:</p>
+                            
+                            <div className="grid grid-cols-2 gap-2 my-2">
+                              <div 
+                                onClick={() => setTargetEnv("dev")}
+                                className={`p-3 rounded-md border cursor-pointer text-center transition-all ${targetEnv === "dev" ? "bg-[var(--whatsapp-green)] text-white border-transparent" : "bg-muted/50 hover:bg-muted"}`}
+                              >
+                                <div className="font-bold">Desenvolvimento</div>
+                                <div className="text-xs opacity-90 font-medium">Test / Listening Node</div>
+                              </div>
+                              <div 
+                                onClick={() => setTargetEnv("prod")}
+                                className={`p-3 rounded-md border cursor-pointer text-center transition-all ${targetEnv === "prod" ? "bg-[var(--whatsapp-green)] text-white border-transparent" : "bg-muted/50 hover:bg-muted"}`}
+                              >
+                                <div className="font-bold">Produção</div>
+                                <div className="text-xs opacity-90 font-medium">Disparo Real (Ativo)</div>
+                              </div>
+                            </div>
+
                             <div className="bg-muted p-4 rounded-md text-sm text-foreground space-y-2 border">
                               <p><strong>Total de Leads (Disparos):</strong> <span className="font-bold text-[var(--whatsapp-green)]">{jsonOutput ? (JSON.parse(jsonOutput).disparos?.length || 0) : 0}</span></p>
                               <p><strong>Tags Selecionadas:</strong> {selectedTags.length > 0 ? selectedTags.join(", ") : "Nenhuma (Todos)"}</p>
