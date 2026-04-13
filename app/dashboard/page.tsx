@@ -6,13 +6,14 @@ import { DashboardHeader } from "@/components/dashboard-header"
 import { DashboardMetrics } from "@/components/dashboard-metrics"
 import { LeadsTable } from "@/components/leads-table"
 import { TemplatesManager } from "@/components/templates-manager"
+import { FinancialDashboard } from "@/components/financial-dashboard"
 import { getCurrentUser, onAuthStateChange } from "@/lib/supabase"
 
 export default function DashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState<"leads" | "templates">("leads")
+  const [activeTab, setActiveTab] = useState<"leads" | "templates" | "financeiro">("leads")
   const router = useRouter()
 
   useEffect(() => {
@@ -99,6 +100,13 @@ export default function DashboardPage() {
                 Disparador (Mensagens)
                 {activeTab === 'templates' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--whatsapp-green)] rounded-t-full" />}
             </button>
+            <button 
+                onClick={() => setActiveTab('financeiro')}
+                className={`px-4 py-3 font-medium text-sm transition-colors outline-none relative ${activeTab === 'financeiro' ? 'text-[var(--whatsapp-green)]' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+                Financeiro
+                {activeTab === 'financeiro' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--whatsapp-green)] rounded-t-full" />}
+            </button>
         </div>
 
         {activeTab === 'leads' ? (
@@ -106,9 +114,13 @@ export default function DashboardPage() {
                 <DashboardMetrics />
                 <LeadsTable />
             </div>
-        ) : (
+        ) : activeTab === 'templates' ? (
             <div className="animate-in fade-in duration-500">
                 <TemplatesManager />
+            </div>
+        ) : (
+            <div className="animate-in fade-in duration-500">
+                <FinancialDashboard />
             </div>
         )}
       </main>

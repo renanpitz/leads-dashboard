@@ -19,6 +19,7 @@ import {
 import { ChevronLeft, ChevronRight, Lock, Unlock, Filter, MessageCircle, Phone, MessageSquareText, Pencil, ArrowUpDown, Settings2, Plus, LayoutGrid, Trash2 } from "lucide-react"
 import { getClientes, updateClienteStatus, updateClienteTag, updateClienteProduto, addCliente, deleteCliente, type Cliente } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
+import { PatientDetailsModal } from "@/components/patient-details-modal"
 
 const getTagColor = (tag: string | null) => {
   if (!tag) return ""
@@ -32,7 +33,7 @@ const getTagColor = (tag: string | null) => {
   return ""
 }
 
-const PRODUTOS_OPTIONS = ["VPPB", "Labirintite", "Dor Facial", "Zumbido", "Outros"]
+const PRODUTOS_OPTIONS = ["VPPB", "Zumbido", "Dor Orofacial", "Labirintite", "Outros"]
 
 export function LeadsTable() {
   const [currentPage, setCurrentPage] = useState(1)
@@ -49,6 +50,9 @@ export function LeadsTable() {
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false)
   const [newLead, setNewLead] = useState<{ nome: string, telefone: string, tag_status: string, servico_interesse: string[], interessado: string }>({ nome: "", telefone: "", tag_status: "", servico_interesse: [], interessado: "sim" })
   const [isAddingLead, setIsAddingLead] = useState(false)
+  const [erroNome, setErroNome] = useState(false)
+  const [erroTelefone, setErroTelefone] = useState(false)
+  const [mensagemErroLead, setMensagemErroLead] = useState('')
   const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false)
 
   const [visibleColumns, setVisibleColumns] = useState({
@@ -59,6 +63,18 @@ export function LeadsTable() {
     mensagem: true,
     followup: true
   })
+
+  const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null)
+  const [isPatientDetailsOpen, setIsPatientDetailsOpen] = useState(false)
+
+  // DEBUG: Log state changes
+  useEffect(() => {
+    console.log("🔍 [DEBUG] selectedCliente changed:", selectedCliente ? { id: selectedCliente.id, nome: selectedCliente.nome } : null)
+  }, [selectedCliente])
+
+  useEffect(() => {
+    console.log("🔍 [DEBUG] isPatientDetailsOpen changed:", isPatientDetailsOpen)
+  }, [isPatientDetailsOpen])
 
   useEffect(() => {
     const saved = localStorage.getItem("leads-table-cols")
@@ -73,13 +89,42 @@ export function LeadsTable() {
     localStorage.setItem("leads-table-cols", JSON.stringify(next))
   }
 
+  const formatTelefone = (value: string) => {
+    // Remove tudo que não é número
+    const numbers = value.replace(/\D/g, '')
+    
+    // Limita a 11 dígitos
+    const limited = numbers.slice(0, 11)
+    
+    // Aplica máscara (XX) XXXXX-XXXX
+    if (limited.length <= 2) return limited
+    if (limited.length <= 7) return `(${limited.slice(0, 2)}) ${limited.slice(2)}`
+    return `(${limited.slice(0, 2)}) ${limited.slice(2, 7)}-${limited.slice(7)}`
+  }
+
   const handleAddLead = async () => {
-    if (!newLead.nome || !newLead.telefone) {
-      toast({ title: "Atenção", description: "Nome e Telefone são obrigatórios.", variant: "destructive" })
+    // Resetar erros
+    setErroNome(false)
+    setErroTelefone(false)
+    setMensagemErroLead('')
+    
+    // Validar nome
+    if (!newLead.nome.trim()) {
+      setErroNome(true)
+      setMensagemErroLead('O nome é obrigatório')
+      return
+    }
+    
+    // Validar telefone
+    // Aceita o usuário digitar com máscara (11 dígitos) ou já com DDI (55 + 11 dígitos)
+    const telefoneLimpo = newLead.telefone.replace(/\D/g, '')
+    if (!telefoneLimpo || (telefoneLimpo.length !== 11 && !(telefoneLimpo.length === 13 && telefoneLimpo.startsWith('55')))) {
+      setErroTelefone(true)
+      setMensagemErroLead('Telefone deve ter 11 dígitos (DDD + número) — ex: (XX) XXXXX-XXXX')
       return
     }
     setIsAddingLead(true)
-    const success = await addCliente({
+    const novoCliente = await addCliente({
       nome: newLead.nome,
       telefone: newLead.telefone,
       tag_status: newLead.tag_status || null,
@@ -88,11 +133,26 @@ export function LeadsTable() {
     })
     setIsAddingLead(false)
     
-    if (success) {
+    if (novoCliente) {
       toast({ title: "Sucesso", description: "Lead adicionado com sucesso." })
+      
+      // Fecha o modal de adicionar
       setIsAddLeadOpen(false)
+      
+      // Limpa o formulário
       setNewLead({ nome: "", telefone: "", tag_status: "", servico_interesse: [], interessado: "sim" })
-      loadClientes()
+      
+      // Resetar erros
+      setErroNome(false)
+      setErroTelefone(false)
+      setMensagemErroLead('')
+      
+      // Recarrega a lista
+      await loadClientes()
+      
+      // Abre o modal de detalhes com o lead recém-criado
+      setSelectedCliente(novoCliente)
+      setIsPatientDetailsOpen(true)
     } else {
       toast({ title: "Erro", description: "Falha ao adicionar lead.", variant: "destructive" })
     }
@@ -474,7 +534,23 @@ export function LeadsTable() {
                 <TableBody>
                   {currentClientes.map((cliente) => (
                     <TableRow key={cliente.id}>
-                      {visibleColumns.cliente && <TableCell className="font-medium">{cliente.nome || "Sem nome"}</TableCell>}
+                      {visibleColumns.cliente && (
+                        <TableCell className="font-medium">
+                          <button
+                            onClick={() => {
+                              console.log("🖱️ [DEBUG] Clicou no lead:", cliente.nome, "ID:", cliente.id)
+                              console.log("🔍 [DEBUG] Estado ANTES do click - selectedCliente:", selectedCliente ? { id: selectedCliente.id, nome: selectedCliente.nome } : null)
+                              console.log("🔍 [DEBUG] Estado ANTES do click - isPatientDetailsOpen:", isPatientDetailsOpen)
+                              setSelectedCliente(cliente)
+                              setIsPatientDetailsOpen(true)
+                              console.log("✅ [DEBUG] setSelectedCliente e setIsPatientDetailsOpen chamados")
+                            }}
+                            className="text-left hover:text-[var(--whatsapp-green)] hover:underline cursor-pointer transition-colors"
+                          >
+                            {cliente.nome || "Sem nome"}
+                          </button>
+                        </TableCell>
+                      )}
                       {visibleColumns.cliente && (
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -768,25 +844,49 @@ export function LeadsTable() {
                   <AlertDialogDescription asChild>
                     <div className="space-y-4 mt-4 text-foreground text-sm">
                       <div>
-                        <label className="block text-xs font-medium text-muted-foreground mb-1">Nome Completo *</label>
+                        <label className={`block text-xs font-medium mb-1 ${erroNome ? 'text-red-600' : 'text-muted-foreground'}`}>Nome Completo *</label>
                         <input
                           type="text"
                           value={newLead.nome}
-                          onChange={(e) => setNewLead({ ...newLead, nome: e.target.value })}
-                          className="w-full border border-input rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--whatsapp-green)]"
+                          onChange={(e) => {
+                            setNewLead({ ...newLead, nome: e.target.value })
+                            if (erroNome) setErroNome(false)
+                            if (mensagemErroLead) setMensagemErroLead('')
+                          }}
+                          className={`w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+                            erroNome 
+                              ? 'border-red-500 focus:ring-red-500' 
+                              : 'border-input focus:ring-[var(--whatsapp-green)]'
+                          }`}
                           placeholder="Ex: João da Silva"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-muted-foreground mb-1">Telefone (com DDD) *</label>
+                        <label className={`block text-xs font-medium mb-1 ${erroTelefone ? 'text-red-600' : 'text-muted-foreground'}`}>Telefone (DDD + Número) *</label>
                         <input
                           type="text"
                           value={newLead.telefone}
-                          onChange={(e) => setNewLead({ ...newLead, telefone: e.target.value })}
-                          className="w-full border border-input rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--whatsapp-green)]"
-                          placeholder="Ex: 5511999999999"
+                          onChange={(e) => {
+                            const formatted = formatTelefone(e.target.value)
+                            setNewLead({ ...newLead, telefone: formatted })
+                            if (erroTelefone) setErroTelefone(false)
+                            if (mensagemErroLead) setMensagemErroLead('')
+                          }}
+                          className={`w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+                            erroTelefone 
+                              ? 'border-red-500 focus:ring-red-500' 
+                              : 'border-input focus:ring-[var(--whatsapp-green)]'
+                          }`}
+                          placeholder="(11) 99999-9999"
+                          maxLength={15}
                         />
                       </div>
+                      
+                      {mensagemErroLead && (
+                        <div className="text-sm text-red-600 font-medium bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                          {mensagemErroLead}
+                        </div>
+                      )}
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-xs font-medium text-muted-foreground mb-1">Interessado?</label>
@@ -846,6 +946,26 @@ export function LeadsTable() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+
+            {/* Modal de Detalhes do Paciente */}
+            <PatientDetailsModal
+              cliente={selectedCliente}
+              open={isPatientDetailsOpen}
+              onOpenChange={(open) => {
+                console.log("🔄 [DEBUG] PatientDetailsModal onOpenChange chamado. open=", open)
+                console.log("🔍 [DEBUG] selectedCliente atual:", selectedCliente ? { id: selectedCliente.id, nome: selectedCliente.nome } : null)
+                setIsPatientDetailsOpen(open)
+                // Quando o modal fechar, reseta o cliente selecionado
+                if (!open) {
+                  console.log("🧹 [DEBUG] Modal fechou, resetando selectedCliente para null")
+                  setSelectedCliente(null)
+                }
+              }}
+              onClienteUpdate={() => {
+                console.log("🔄 [DEBUG] onClienteUpdate chamado, recarregando lista...")
+                loadClientes()
+              }}
+            />
           </>
         )}
       </CardContent>
