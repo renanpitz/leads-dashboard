@@ -39,19 +39,34 @@ export function DashboardMetrics() {
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [loading, setLoading] = useState(false)
   
-  // Estado do filtro de data com padrão de 7 dias
-  const [startDate, setStartDate] = useState<string>(() => {
-    const date = new Date()
-    date.setDate(date.getDate() - 7)
-    return date.toISOString().split('T')[0]
-  })
-  const [endDate, setEndDate] = useState<string>(new Date().toISOString().split('T')[0])
-  
-  const getDefaultStartDate = () => {
-    const date = new Date()
-    date.setDate(date.getDate() - 7)
-    return date.toISOString().split('T')[0]
+  // Estado do filtro de data com padrão de 7 dias (inclui hoje)
+  // Para incluir o dia de hoje, a janela deve ser de 7 dias contando hoje como o último dia.
+  // Ex.: hoje + 6 dias anteriores => start = hoje - 6.
+  const formatLocalDate = (date: Date) => {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, "0")
+    const d = String(date.getDate()).padStart(2, "0")
+    return `${y}-${m}-${d}`
   }
+
+  const getTodayLocal = () => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    return d
+  }
+
+  const getDefaultStartDate = () => {
+    const d = getTodayLocal()
+    d.setDate(d.getDate() - 6)
+    return formatLocalDate(d)
+  }
+
+  const getDefaultEndDate = () => {
+    return formatLocalDate(getTodayLocal())
+  }
+
+  const [startDate, setStartDate] = useState<string>(() => getDefaultStartDate())
+  const [endDate, setEndDate] = useState<string>(() => getDefaultEndDate())
 
   const loadClientes = async () => {
     setLoading(true)
@@ -71,8 +86,8 @@ export function DashboardMetrics() {
     loadClientes()
   }, [])
 
-  const startDateObj = startDate ? new Date(startDate) : undefined
-  const endDateObj = endDate ? new Date(endDate) : undefined
+  const startDateObj = startDate ? new Date(`${startDate}T00:00:00`) : undefined
+  const endDateObj = endDate ? new Date(`${endDate}T00:00:00`) : undefined
   const metrics = calculateMetrics(clientes, startDateObj, endDateObj)
 
   return (
@@ -117,7 +132,7 @@ export function DashboardMetrics() {
               <Clock className="h-4 w-4 text-blue-500" />
             </div>
             <div className="w-full space-y-2">
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2">
                 <input
                   type="date"
                   value={startDate}
@@ -134,7 +149,7 @@ export function DashboardMetrics() {
               <button
                 onClick={() => {
                   setStartDate(getDefaultStartDate())
-                  setEndDate(new Date().toISOString().split('T')[0])
+                  setEndDate(getDefaultEndDate())
                 }}
                 className="w-full rounded bg-blue-100 py-1 text-xs text-blue-600 hover:bg-blue-200"
               >
@@ -145,7 +160,7 @@ export function DashboardMetrics() {
           <CardContent>
             <div className="text-2xl font-bold text-blue-500">{loading ? "..." : metrics.leadsInRange}</div>
             <p className="text-xs text-muted-foreground">
-              {new Date(startDate).toLocaleDateString('pt-BR')} a {new Date(endDate).toLocaleDateString('pt-BR')}
+              {new Date(`${startDate}T00:00:00`).toLocaleDateString('pt-BR')} a {new Date(`${endDate}T00:00:00`).toLocaleDateString('pt-BR')}
             </p>
           </CardContent>
         </Card>

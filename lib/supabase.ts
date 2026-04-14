@@ -253,6 +253,18 @@ export async function updateClienteProduto(id: number, servico_interesse: string
   return true
 }
 
+export async function updateClienteNome(id: number, nome: string | null): Promise<boolean> {
+  const supabase = createClient()
+  const { error } = await supabase.from(TABLE_NAME).update({ nome }).eq("id", id)
+
+  if (error) {
+    console.error("Erro ao atualizar nome do cliente:", error)
+    return false
+  }
+
+  return true
+}
+
 export async function updateClienteInteressado(id: number, interessado: boolean): Promise<boolean> {
   const supabase = createClient()
 

@@ -69,6 +69,17 @@ export function FinancialDashboard() {
 
   return (
     <div className="space-y-6">
+      <PeriodFilter
+        value={{ startDate, endDate, activeFilter }}
+        onChange={(next) => {
+          setStartDate(next.startDate)
+          setEndDate(next.endDate)
+          setActiveFilter(next.activeFilter)
+        }}
+        rightText={`${filteredConsultas.length} transações`}
+        stickyTopClassName="top-0"
+      />
+
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="grid w-full grid-cols-8 h-auto">
         <TabsTrigger value="overview" className="flex items-center gap-2">
@@ -112,17 +123,6 @@ export function FinancialDashboard() {
 
       {/* Tab: Visão Geral */}
       <TabsContent value="overview" className="space-y-6">
-        <PeriodFilter
-          value={{ startDate, endDate, activeFilter }}
-          onChange={(next) => {
-            setStartDate(next.startDate)
-            setEndDate(next.endDate)
-            setActiveFilter(next.activeFilter)
-          }}
-          rightText={`${filteredConsultas.length} transações`}
-          stickyTopClassName="top-0"
-        />
-
         {/* Metrics */}
         <FinancialMetrics consultas={filteredConsultas} isLoading={isLoading} />
         
@@ -140,54 +140,21 @@ export function FinancialDashboard() {
 
       {/* Tab: Tabelas de Preço */}
       <TabsContent value="prices" className="space-y-6">
-        <PeriodFilter
-          value={{ startDate, endDate, activeFilter }}
-          onChange={(next) => {
-            setStartDate(next.startDate)
-            setEndDate(next.endDate)
-            setActiveFilter(next.activeFilter)
-          }}
-        />
         <PriceTableManager />
       </TabsContent>
 
       {/* Tab: Relatórios */}
       <TabsContent value="reports" className="space-y-6">
-        <PeriodFilter
-          value={{ startDate, endDate, activeFilter }}
-          onChange={(next) => {
-            setStartDate(next.startDate)
-            setEndDate(next.endDate)
-            setActiveFilter(next.activeFilter)
-          }}
-        />
         <RevenueReports />
       </TabsContent>
 
       {/* Tab: Análise de Serviços */}
       <TabsContent value="analysis" className="space-y-6">
-        <PeriodFilter
-          value={{ startDate, endDate, activeFilter }}
-          onChange={(next) => {
-            setStartDate(next.startDate)
-            setEndDate(next.endDate)
-            setActiveFilter(next.activeFilter)
-          }}
-        />
         <ServiceAnalysis consultas={filteredConsultas} />
       </TabsContent>
 
       {/* Tab: Despesas */}
       <TabsContent value="expenses" className="space-y-6">
-        <PeriodFilter
-          value={{ startDate, endDate, activeFilter }}
-          onChange={(next) => {
-            setStartDate(next.startDate)
-            setEndDate(next.endDate)
-            setActiveFilter(next.activeFilter)
-          }}
-          stickyTopClassName="top-0"
-        />
         <ExpenseManagement
           dateFrom={startDate || "1900-01-01"}
           dateTo={endDate || format(new Date(), "yyyy-MM-dd")}
@@ -196,40 +163,16 @@ export function FinancialDashboard() {
 
       {/* Tab: Metas */}
       <TabsContent value="goals" className="space-y-6">
-        <PeriodFilter
-          value={{ startDate, endDate, activeFilter }}
-          onChange={(next) => {
-            setStartDate(next.startDate)
-            setEndDate(next.endDate)
-            setActiveFilter(next.activeFilter)
-          }}
-        />
         <GoalsProjections />
       </TabsContent>
 
       {/* Tab: Recibos */}
       <TabsContent value="receipts" className="space-y-6">
-        <PeriodFilter
-          value={{ startDate, endDate, activeFilter }}
-          onChange={(next) => {
-            setStartDate(next.startDate)
-            setEndDate(next.endDate)
-            setActiveFilter(next.activeFilter)
-          }}
-        />
         <ReceiptIssuance />
       </TabsContent>
 
       {/* Tab: Integrações */}
       <TabsContent value="integrations" className="space-y-6">
-        <PeriodFilter
-          value={{ startDate, endDate, activeFilter }}
-          onChange={(next) => {
-            setStartDate(next.startDate)
-            setEndDate(next.endDate)
-            setActiveFilter(next.activeFilter)
-          }}
-        />
         <PaymentIntegrations />
       </TabsContent>
       </Tabs>

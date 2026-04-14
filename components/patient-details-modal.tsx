@@ -28,7 +28,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Trash2, Calendar, DollarSign, X, Lock, Unlock, MessageCircle, MessageSquareText, Package, Tag, Edit2, Check } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { type Cliente, type Consulta, getConsultasByClienteId, addConsulta, deleteConsulta, updateConsulta, updateClienteStatus, updateClienteTag, updateClienteProduto, updateClienteFollowUp, deleteCliente } from "@/lib/supabase"
+import { type Cliente, type Consulta, getConsultasByClienteId, addConsulta, deleteConsulta, updateConsulta, updateClienteStatus, updateClienteTag, updateClienteProduto, updateClienteFollowUp, updateClienteNome, deleteCliente } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 import { formatCurrency } from "@/lib/utils"
 
@@ -54,12 +54,14 @@ export function PatientDetailsModal({ cliente, open, onOpenChange, onClienteUpda
   const [loading, setLoading] = useState(false)
   
   // Estados de edição
+  const [editingNome, setEditingNome] = useState(false)
   const [editingProduto, setEditingProduto] = useState(false)
   const [editingFollowUp, setEditingFollowUp] = useState(false)
   const [showStatusDialog, setShowStatusDialog] = useState(false)
   const [showRemoveDialog, setShowRemoveDialog] = useState(false)
-  
+
   // Valores temporários para edição
+  const [tempNome, setTempNome] = useState("")
   const [tempProdutos, setTempProdutos] = useState<string[]>([])
   const [tempFollowUp, setTempFollowUp] = useState(0)
   
@@ -109,8 +111,10 @@ export function PatientDetailsModal({ cliente, open, onOpenChange, onClienteUpda
       setLocalCliente(cliente)
       loadConsultas()
       // Reset estados de edição
+      setEditingNome(false)
       setEditingProduto(false)
       setEditingFollowUp(false)
+      setTempNome(cliente.nome || "")
     }
   }, [open, cliente])
 
@@ -137,6 +141,21 @@ export function PatientDetailsModal({ cliente, open, onOpenChange, onClienteUpda
       setEditParcelas(1)
     }
   }, [editFormaPagamento])
+
+  const handleUpdateNome = async () => {
+    if (!localCliente) return
+
+    const nomeToSave = tempNome.trim() ? tempNome.trim() : null
+    const success = await updateClienteNome(localCliente.id, nomeToSave)
+
+    if (success) {
+      setLocalCliente({ ...localCliente, nome: nomeToSave })
+      setEditingNome(false)
+      toast({ title: "Nome atualizado", description: "O nome foi atualizado com sucesso." })
+    } else {
+      toast({ title: "Erro", description: "Não foi possível atualizar o nome.", variant: "destructive" })
+    }
+  }
 
   const handleUpdateProduto = async () => {
     if (!localCliente) return
@@ -418,10 +437,60 @@ export function PatientDetailsModal({ cliente, open, onOpenChange, onClienteUpda
     <Dialog open={open} onOpenChange={handleModalOpenChange}>
       <DialogContent className="max-w-[95vw] lg:max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl pr-8">{localCliente.nome}</DialogTitle>
-          <DialogDescription className="flex gap-4 text-sm mt-2">
-            <span>📱 {localCliente.telefone}</span>
-          </DialogDescription>
+          <div className="pr-8">
+            {!editingNome ? (
+              <div className="flex items-center gap-2">
+                <DialogTitle className="text-2xl">{localCliente.nome || "Sem nome"}</DialogTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2"
+                  onClick={() => {
+                    setTempNome(localCliente.nome || "")
+                    setEditingNome(true)
+                  }}
+                  title="Editar nome"
+                >
+                  <Edit2 className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={tempNome}
+                    onChange={(e) => setTempNome(e.target.value)}
+                    className="h-9"
+                    placeholder="Nome do lead"
+                  />
+                  <Button size="sm" className="h-9" onClick={handleUpdateNome} title="Salvar">
+                    <Check className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-9"
+                    variant="outline"
+                    onClick={() => {
+                      setEditingNome(false)
+                      setTempNome(localCliente.nome || "")
+                    }}
+                    title="Cancelar"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+                <DialogDescription className="flex gap-4 text-sm">
+                  <span>📱 {localCliente.telefone}</span>
+                </DialogDescription>
+              </div>
+            )}
+          </div>
+
+          {!editingNome && (
+            <DialogDescription className="flex gap-4 text-sm mt-2">
+              <span>📱 {localCliente.telefone}</span>
+            </DialogDescription>
+          )}
         </DialogHeader>
 
         {/* Campos compactos no topo */}
