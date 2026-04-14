@@ -98,8 +98,9 @@ export function TemplatesManager() {
       if (!c.servico_interesse) {
         if (!selectedProdutos.includes("Sem Produto")) return false
       } else {
-        const leadProds = c.servico_interesse.split(",").map(s => s.trim())
-        const hasMatch = leadProds.some(lp => selectedProdutos.includes(lp))
+        const selectedProdutosLower = selectedProdutos.map(p => p.toLowerCase())
+        const leadProds = c.servico_interesse.split(",").map(s => s.trim().toLowerCase())
+        const hasMatch = leadProds.some(lp => selectedProdutosLower.includes(lp))
         if (!hasMatch) return false
       }
     }
