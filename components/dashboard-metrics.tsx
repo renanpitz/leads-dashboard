@@ -57,6 +57,12 @@ export function DashboardMetrics() {
 
   const getDefaultStartDate = () => {
     const d = getTodayLocal()
+    // Define o pré-filtro padrão como Hoje
+    return formatLocalDate(d)
+  }
+
+  const getLast7DaysStartDate = () => {
+    const d = getTodayLocal()
     d.setDate(d.getDate() - 6)
     return formatLocalDate(d)
   }
@@ -146,15 +152,26 @@ export function DashboardMetrics() {
                   className="h-8 w-full rounded border border-gray-300 px-2 py-1 text-xs"
                 />
               </div>
-              <button
-                onClick={() => {
-                  setStartDate(getDefaultStartDate())
-                  setEndDate(getDefaultEndDate())
-                }}
-                className="w-full rounded bg-blue-100 py-1 text-xs text-blue-600 hover:bg-blue-200"
-              >
-                Últimos 7 dias
-              </button>
+              <div className="flex w-full gap-2">
+                <button
+                  onClick={() => {
+                    setStartDate(formatLocalDate(getTodayLocal()))
+                    setEndDate(formatLocalDate(getTodayLocal()))
+                  }}
+                  className="w-full rounded bg-blue-100 py-1 text-xs text-blue-600 hover:bg-blue-200 transition-colors"
+                >
+                  Hoje
+                </button>
+                <button
+                  onClick={() => {
+                    setStartDate(getLast7DaysStartDate())
+                    setEndDate(getDefaultEndDate())
+                  }}
+                  className="w-full rounded bg-blue-50 py-1 text-xs text-blue-500 hover:bg-blue-100 transition-colors"
+                >
+                  7 dias
+                </button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
